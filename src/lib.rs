@@ -213,7 +213,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
         }
 
         let outputs: Vec<TxOutput> = Vec::new();
-        let output_count = u32::from_le_bytes(data[4..8].try_into().unwrap());
+        let output_count = u32::from_le_bytes(data[last_idx..last_idx + 8].try_into().unwrap());
         for _ in 0..output_count {
             let value = u64::from_le_bytes(data[last_idx..last_idx + 8].try_into().unwrap());
 
@@ -227,7 +227,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
                 script_pubkey,
             };
 
-            outputs.push(input);
+            outputs.push(output);
         }
 
         return Ok(LegacyTransaction {
@@ -279,7 +279,7 @@ impl BitcoinSerialize for LegacyTransaction {
 
         result.extend_from_slice(&self.version.to_le_bytes());
         result.extend_from_slice(&self.lock_time.to_le_bytes());
-        
+
         result
     }
 }
