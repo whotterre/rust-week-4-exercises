@@ -142,7 +142,7 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
         "send" => {
             if args.len() < 4 {
                 return Err(BitcoinError::ParseError(
-                    ("Invalid number of args.".to_str()),
+                    ("Invalid number of args.".to_string()),
                 ));
             }
 
@@ -275,11 +275,11 @@ pub fn parse_compact_size(data: &[u8]) -> Result<(usize, usize), BitcoinError> {
 // Custom serialization for transaction
 impl BitcoinSerialize for LegacyTransaction {
     fn serialize(&self) -> Vec<u8> {
-        // Serialize only version and lock_time (simplified)
         let mut result = Vec::new();
 
-        result.push(self.version.to_le_bytes().try_into().unwrap());
-        result.push(self.lock_time.to_le_bytes().try_into().unwrap());
+        result.extend_from_slice(&self.version.to_le_bytes());
+        result.extend_from_slice(&self.lock_time.to_le_bytes());
+        
         result
     }
 }
