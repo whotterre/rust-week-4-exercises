@@ -23,15 +23,14 @@ pub struct Point<T> {
 
 impl<T> Point<T> {
     pub fn new(x: T, y: T) -> Self {
-        Point{x, y}
+        Point { x, y }
     }
 }
 
 // Custom serialization for Bitcoin transaction
 pub trait BitcoinSerialize {
     fn serialize(&self) -> Vec<u8> {
-        // Implement serialization to bytes 
-
+        // Implement serialization to bytes
     }
 }
 
@@ -63,11 +62,11 @@ impl Default for LegacyTransactionBuilder {
     fn default() -> Self {
         // Implement default values
         // Initialize new builder by calling default
-       Self{
+        Self {
             version: 1,
             inputs: Vec::new(),
             outputs: Vec::new(),
-            lock_time: 0
+            lock_time: 0,
         }
     }
 }
@@ -104,12 +103,12 @@ impl LegacyTransactionBuilder {
 
     pub fn build(self) -> LegacyTransaction {
         // Build and return the final LegacyTransaction
-        return LegacyTransaction { 
+        return LegacyTransaction {
             version: self.version,
-             inputs: self.inputs,
+            inputs: self.inputs,
             outputs: self.outputs,
-            lock_time: self.lock_time
-         }
+            lock_time: self.lock_time,
+        };
     }
 }
 
@@ -135,7 +134,36 @@ pub struct OutPoint {
 
 // Simple CLI argument parser
 pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
-    // TODO: Match args to "send" or "balance" commands and parse required arguments
+    // Match args to "send" or "balance" commands and parse required arguments
+    // Send needs two args - amount and address
+    // Balance needs no args
+    match args[1].as_str() {
+        "send" => {
+            if args.len() < 4 {
+                return Err(BitcoinError::ParseError(
+                    ("Invalid number of args.".to_str()),
+                ));
+            }
+
+            let amount = args[2]
+                .parse::<u64>()
+                .map_err(|_| BitcoinError::InvalidAmount)?;
+
+            let address = args[3].clone();
+
+            Ok(CliCommand::Send { amount, address })
+        }
+        "balance" => {
+            if args.len() > 2 {
+                return Err(BitcoinError::ParseError(
+                    "Balance takes no arguments".to_string(),
+                ));
+            }
+
+            Ok(CliCommand::Balance)
+        }
+        _ => Err(BitcoinError::ParseError(format!("Unknown command: {}", args[1]))),
+    }
 }
 
 pub enum CliCommand {
@@ -148,7 +176,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
     type Error = BitcoinError;
 
     fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
-        // TODO: Parse binary data into a LegacyTransaction
+        // Parse binary data into a LegacyTransaction
         // Minimum length is 10 bytes (4 version + 4 inputs count + 4 lock_time)
     }
 }
