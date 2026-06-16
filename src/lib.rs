@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use thiserror::Error;
 
 // Custom errors for Bitcoin operations
@@ -104,12 +103,12 @@ impl LegacyTransactionBuilder {
 
     pub fn build(self) -> LegacyTransaction {
         // Build and return the final LegacyTransaction
-        return LegacyTransaction {
+        LegacyTransaction {
             version: self.version,
             inputs: self.inputs,
             outputs: self.outputs,
             lock_time: self.lock_time,
-        };
+        }
     }
 }
 
@@ -249,12 +248,12 @@ impl TryFrom<&[u8]> for LegacyTransaction {
 
         let lock_time = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
 
-        return Ok(LegacyTransaction {
+        Ok(LegacyTransaction {
             version,
             inputs,
             outputs,
             lock_time,
-        });
+        })
     }
 }
 
