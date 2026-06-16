@@ -141,7 +141,9 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
     match args[1].as_str() {
         "send" => {
             if args.len() < 4 {
-                return Err(BitcoinError::ParseError("Invalid number of args.".to_string()));
+                return Err(BitcoinError::ParseError(
+                    "Invalid number of args.".to_string(),
+                ));
             }
 
             let amount = args[2]
@@ -187,13 +189,15 @@ impl TryFrom<&[u8]> for LegacyTransaction {
 
         let version = i32::from_le_bytes(data[0..4].try_into().unwrap());
         last_idx += 4;
-        let inputs: Vec<TxInput> = Vec::new();
+        let mut inputs: Vec<TxInput> = Vec::new();
         let (input_count, bytes_read) = parse_compact_size(&data[4..])?;
         let input_count = input_count as u32;
         last_idx += bytes_read;
 
         for _ in 0..input_count {
-            let txid: [u8; 32] = data[last_idx..last_idx + 32].try_into()?;
+            let txid: [u8; 32] = data[last_idx..last_idx + 32]
+                .try_into()
+                .map_err(|_| BitcoinError::InvalidTransaction)?;
             last_idx += 32;
 
             let vout = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
@@ -203,6 +207,14 @@ impl TryFrom<&[u8]> for LegacyTransaction {
 
             // Parse the script sig here ....but then again
             // is this real?
+            let (script_len, bytes_read) = parse_compact_size(&data[last_idx..])?;
+            last_idx += bytes_read;
+            let script_sig = data[last_idx..last_idx + script_len].to_vec();
+            last_idx += script_len;
+
+            // Parse sequence (4 bytes)
+            let sequence = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
+            last_idx += 4;
 
             let input = TxInput {
                 previous_output,
@@ -213,7 +225,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
             inputs.push(input);
         }
 
-        let outputs: Vec<TxOutput> = Vec::new();
+        let mut outputs: Vec<TxOutput> = Vec::new();
         let (output_count, bytes_read) = parse_compact_size(&data[last_idx..])?;
         last_idx += bytes_read;
         for _ in 0..output_count {
@@ -253,7 +265,9 @@ pub fn parse_compact_size(data: &[u8]) -> Result<(usize, usize), BitcoinError> {
     match data[0] {
         0xFD => {
             if data.len() < 3 {
-               return Err(BitcoinError::ParseError("Not enough bytes for the particular CompactType".to_string()));
+                return Err(BitcoinError::ParseError(
+                    "Not enough bytes for the particular CompactType".to_string(),
+                ));
             }
             let value = u16::from_le_bytes(data[1..3].try_into().unwrap());
             Ok((value as usize, 3))
@@ -261,7 +275,9 @@ pub fn parse_compact_size(data: &[u8]) -> Result<(usize, usize), BitcoinError> {
 
         0xFE => {
             if data.len() < 5 {
-                return Err(BitcoinError::ParseError(("Not enough bytes for the particular CompactType".to_string())));
+                return Err(BitcoinError::ParseError(
+                    "Not enough bytes for the particular CompactType".to_string(),
+                ));
             }
             let value = u32::from_le_bytes(data[1..5].try_into().unwrap());
             Ok((value as usize, 5))
@@ -269,7 +285,9 @@ pub fn parse_compact_size(data: &[u8]) -> Result<(usize, usize), BitcoinError> {
 
         0xFF => {
             if data.len() < 9 {
-                return Err(BitcoinError::ParseError(("Not enough bytes for the particular CompactType".to_string())));
+                return Err(BitcoinError::ParseError(
+                    "Not enough bytes for the particular CompactType".to_string(),
+                ));
             }
             let value = u64::from_le_bytes(data[1..9].try_into().unwrap());
             Ok((value as usize, 9))
