@@ -78,15 +78,20 @@ impl LegacyTransactionBuilder {
     }
 
     pub fn version(mut self, version: i32) -> Self {
-        // TODO: Set the transaction version
+        // Set the transaction version
+        self.version = version;
+        Self
     }
 
     pub fn add_input(mut self, input: TxInput) -> Self {
-        // TODO: Add input to the transaction
+        // Add input to the transaction
+        self.inputs.push(input);
+        Self
     }
 
     pub fn add_output(mut self, output: TxOutput) -> Self {
-        // TODO: Add output to the transaction
+        // Add output to the transaction
+        self.outputs
     }
 
     pub fn lock_time(mut self, lock_time: u32) -> Self {
