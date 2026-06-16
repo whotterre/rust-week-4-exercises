@@ -31,6 +31,7 @@ impl<T> Point<T> {
 pub trait BitcoinSerialize {
     fn serialize(&self) -> Vec<u8> {
         // Implement serialization to bytes
+        Vec::new()
     }
 }
 
@@ -162,7 +163,10 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
 
             Ok(CliCommand::Balance)
         }
-        _ => Err(BitcoinError::ParseError(format!("Unknown command: {}", args[1]))),
+        _ => Err(BitcoinError::ParseError(format!(
+            "Unknown command: {}",
+            args[1]
+        ))),
     }
 }
 
@@ -178,12 +182,104 @@ impl TryFrom<&[u8]> for LegacyTransaction {
     fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
         // Parse binary data into a LegacyTransaction
         // Minimum length is 10 bytes (4 version + 4 inputs count + 4 lock_time)
+        if data.len() < 10 {
+            return Err(BitcoinError::InvalidTransaction);
+        }
+
+        let version = u32::from_le_bytes(data[0..4].try_into().unwrap()) as i32;
+        let inputs: Vec<TxInput> = Vec::new();
+        let input_count = u32::from_le_bytes(data[4..8].try_into().unwrap());
+        let mut last_idx = 8;
+
+        for _ in 0..input_count {
+            let txid: [u8; 32] = data[last_idx..last_idx + 32].try_into()?;
+            last_idx += 32;
+
+            let vout = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
+            last_idx += 4;
+
+            let previous_output = OutPoint { txid, vout };
+
+            // Parse the script sig here ....but then again
+            // is this real?
+
+            let input = TxInput {
+                previous_output,
+                script_sig,
+                sequence,
+            };
+
+            inputs.push(input);
+        }
+
+        let outputs: Vec<TxOutput> = Vec::new();
+        let output_count = u32::from_le_bytes(data[4..8].try_into().unwrap());
+        for _ in 0..output_count {
+            let value = u64::from_le_bytes(data[last_idx..last_idx + 8].try_into().unwrap());
+
+            // Parse the script sig here ....but then again
+            // is this real?
+
+            let script_pubkey = Vec::new();
+
+            let output = TxOutput {
+                value,
+                script_pubkey,
+            };
+
+            outputs.push(input);
+        }
+
+        return Ok(LegacyTransaction {
+            version,
+            inputs,
+            outputs,
+            lock_time,
+        });
+    }
+}
+
+pub fn parse_compact_size(data: &[u8]) -> Result<(usize, usize), BitcoinError> {
+    if data.is_empty() {
+        return Err(BitcoinError::InvalidTransaction);
+    }
+    match data[0] {
+        0xFD => {
+            if data.len() < 3 {
+                return Err(BitcoinError::ParseError(("".to_string())));
+            }
+            let value = u16::from_le_bytes(data[1..3].try_into().unwrap());
+            Ok((value as usize, 3))
+        }
+
+        0xFE => {
+            if data.len() < 5 {
+                return Err(BitcoinError::ParseError(("".to_string())));
+            }
+            let value = u32::from_le_bytes(data[1..5].try_into().unwrap());
+            Ok((value as usize, 5))
+        }
+
+        0xFF => {
+            if data.len() < 9 {
+                return Err(BitcoinError::ParseError(("".to_string())));
+            }
+            let value = u64::from_le_bytes(data[1..9].try_into().unwrap());
+            Ok((value as usize, 9))
+        }
+
+        _ => Ok((data[0] as usize, 1)),
     }
 }
 
 // Custom serialization for transaction
 impl BitcoinSerialize for LegacyTransaction {
     fn serialize(&self) -> Vec<u8> {
-        // TODO: Serialize only version and lock_time (simplified)
+        // Serialize only version and lock_time (simplified)
+        let mut result = Vec::new();
+
+        result.push(self.version.to_le_bytes().try_into().unwrap());
+        result.push(self.lock_time.to_le_bytes().try_into().unwrap());
+        result
     }
 }
