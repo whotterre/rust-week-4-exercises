@@ -137,7 +137,7 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
     // Match args to "send" or "balance" commands and parse required arguments
     // Send needs two args - amount and address
     // Balance needs no args
-    if args.is_empty(){
+    if args.is_empty() {
         return Err(BitcoinError::ParseError("Missing command".to_string()));
     }
     match args[0].as_str() {
