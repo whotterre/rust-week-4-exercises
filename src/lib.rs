@@ -137,27 +137,27 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
     // Match args to "send" or "balance" commands and parse required arguments
     // Send needs two args - amount and address
     // Balance needs no args
-    if args.len() < 2 {
+    if args.is_empty(){
         return Err(BitcoinError::ParseError("Missing command".to_string()));
     }
-    match args[1].as_str() {
+    match args[0].as_str() {
         "send" => {
-            if args.len() < 4 {
+            if args.len() < 3 {
                 return Err(BitcoinError::ParseError(
                     "Invalid number of args.".to_string(),
                 ));
             }
 
-            let amount = args[2]
+            let amount = args[1]
                 .parse::<u64>()
                 .map_err(|_| BitcoinError::InvalidAmount)?;
 
-            let address = args[3].clone();
+            let address = args[2].clone();
 
             Ok(CliCommand::Send { amount, address })
         }
         "balance" => {
-            if args.len() > 2 {
+            if args.len() > 1 {
                 return Err(BitcoinError::ParseError(
                     "Balance takes no arguments".to_string(),
                 ));
@@ -167,7 +167,7 @@ pub fn parse_cli_args(args: &[String]) -> Result<CliCommand, BitcoinError> {
         }
         _ => Err(BitcoinError::ParseError(format!(
             "Unknown command: {}",
-            args[1]
+            args[0]
         ))),
     }
 }
