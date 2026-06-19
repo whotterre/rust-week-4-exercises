@@ -300,7 +300,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
 
         Ok(LegacyTransaction {
             version,
-            inputs: inputs,
+            inputs,
             outputs,
             lock_time,
         })
