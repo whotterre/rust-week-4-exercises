@@ -201,7 +201,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
                 .try_into()
                 .map_err(|_| BitcoinError::InvalidTransaction)?,
         );
-        last_idx += bytes_read;
+        last_idx += 4;
 
         let mut inputs: Vec<TxInput> = Vec::with_capacity(input_count as usize);
 
