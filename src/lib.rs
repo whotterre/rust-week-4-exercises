@@ -189,20 +189,34 @@ impl TryFrom<&[u8]> for LegacyTransaction {
         }
         let mut last_idx = 0;
 
-        let version = i32::from_le_bytes(data[0..4].try_into().unwrap());
+        let version = i32::from_le_bytes(
+            data[0..4]
+                .ok_or(BitcoinError::InvalidTransaction)?
+                .try_into()
+                .map_err(|_| BitcoinError::InvalidTransaction)?,
+        );
         last_idx += 4;
-        let mut inputs: Vec<TxInput> = Vec::new();
+
         let (input_count, bytes_read) = parse_compact_size(&data[4..])?;
         let input_count = input_count as u32;
         last_idx += bytes_read;
 
+        let mut inputs: Vec<TxInput> = Vec::with_capacity(input_count as usize);
+
         for _ in 0..input_count {
+            if last_idx + 36 > data.len() {
+                return Err(BitcoinError::InvalidTransaction);
+            }
             let txid: [u8; 32] = data[last_idx..last_idx + 32]
                 .try_into()
                 .map_err(|_| BitcoinError::InvalidTransaction)?;
             last_idx += 32;
 
-            let vout = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
+            let vout = u32::from_le_bytes(
+                data[last_idx..last_idx + 4]
+                    .try_into()
+                    .map_err(|_| BitcoinError::InvalidTransaction)?,
+            );
             last_idx += 4;
 
             let previous_output = OutPoint { txid, vout };
@@ -211,11 +225,24 @@ impl TryFrom<&[u8]> for LegacyTransaction {
             // is this real?
             let (script_len, bytes_read) = parse_compact_size(&data[last_idx..])?;
             last_idx += bytes_read;
+
+            if last_idx + script_len > data.len() {
+                return Err(BitcoinError::InvalidTransaction);
+            }
+
             let script_sig = data[last_idx..last_idx + script_len].to_vec();
             last_idx += script_len;
 
+            if last_idx + 4 > data.len() {
+                return Err(BitcoinError::InvalidTransaction);
+            }
+
             // Parse sequence (4 bytes)
-            let sequence = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
+            let sequence = u32::from_le_bytes(
+                data[last_idx..last_idx + 4]
+                    .try_into()
+                    .map_err(|_| BitcoinError::InvalidTransaction)?,
+            );
             last_idx += 4;
 
             let input = TxInput {
@@ -227,16 +254,28 @@ impl TryFrom<&[u8]> for LegacyTransaction {
             inputs.push(input);
         }
 
-        let mut outputs: Vec<TxOutput> = Vec::new();
         let (output_count, bytes_read) = parse_compact_size(&data[last_idx..])?;
         last_idx += bytes_read;
+        let mut outputs: Vec<TxOutput> = Vec::with_capacity(output_count as usize);
         for _ in 0..output_count {
-            let value = u64::from_le_bytes(data[last_idx..last_idx + 8].try_into().unwrap());
+            if last_idx + 8 > data.len() {
+                return Err(BitcoinError::InvalidTransaction);
+            }
 
+            let value = u64::from_le_bytes(
+                data[last_idx..last_idx + 8]
+                    .try_into()
+                    .map_err(|_| BitcoinError::InvalidTransaction)?,
+            );
+            last_idx += 8;
             // Parse the script sig here ....but then again
             // is this real?
             let (script_len, bytes_read) = parse_compact_size(&data[last_idx..])?;
             last_idx += bytes_read;
+
+            if last_idx + script_len > data.len() {
+                return Err(BitcoinError::InvalidTransaction);
+            }
 
             let script_pubkey = data[last_idx..last_idx + script_len].to_vec();
             last_idx += script_len;
@@ -249,11 +288,19 @@ impl TryFrom<&[u8]> for LegacyTransaction {
             outputs.push(output);
         }
 
-        let lock_time = u32::from_le_bytes(data[last_idx..last_idx + 4].try_into().unwrap());
+        if last_idx + 4 > data.len() {
+            return Err(BitcoinError::InvalidTransaction);
+        }
+
+        let lock_time = u32::from_le_bytes(
+            data[last_idx..last_idx + 4]
+                .try_into()
+                .map_err(|_| BitcoinError::InvalidTransaction)?,
+        );
 
         Ok(LegacyTransaction {
             version,
-            inputs,
+            inputs: inputs,
             outputs,
             lock_time,
         })
