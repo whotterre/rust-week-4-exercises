@@ -191,7 +191,6 @@ impl TryFrom<&[u8]> for LegacyTransaction {
 
         let version = i32::from_le_bytes(
             data[0..4]
-                .ok_or(BitcoinError::InvalidTransaction)?
                 .try_into()
                 .map_err(|_| BitcoinError::InvalidTransaction)?,
         );
