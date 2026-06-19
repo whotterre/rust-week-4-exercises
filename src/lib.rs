@@ -184,7 +184,7 @@ impl TryFrom<&[u8]> for LegacyTransaction {
     fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
         // Parse binary data into a LegacyTransaction
         // Minimum length is 10 bytes (4 version + 4 inputs count + 4 lock_time)
-        if data.len() < 10 {
+        if data.len() < 16 {
             return Err(BitcoinError::InvalidTransaction);
         }
         let mut last_idx = 0;
@@ -196,15 +196,18 @@ impl TryFrom<&[u8]> for LegacyTransaction {
         );
         last_idx += 4;
 
-        let (input_count, bytes_read) = parse_compact_size(&data[4..])?;
-        let input_count = input_count as u32;
+        let input_count = u32::from_le_bytes(
+            data[last_idx..last_idx + 4]
+                .try_into()
+                .map_err(|_| BitcoinError::InvalidTransaction)?,
+        );
         last_idx += bytes_read;
 
         let mut inputs: Vec<TxInput> = Vec::with_capacity(input_count as usize);
 
         for _ in 0..input_count {
             if last_idx + 36 > data.len() {
-                return Err(BitcoinError::InvalidTransaction);
+                break;
             }
             let txid: [u8; 32] = data[last_idx..last_idx + 32]
                 .try_into()
@@ -253,8 +256,12 @@ impl TryFrom<&[u8]> for LegacyTransaction {
             inputs.push(input);
         }
 
-        let (output_count, bytes_read) = parse_compact_size(&data[last_idx..])?;
-        last_idx += bytes_read;
+        let output_count = u32::from_le_bytes(
+            data[last_idx..last_idx + 4]
+                .try_into()
+                .map_err(|_| BitcoinError::InvalidTransaction)?,
+        );
+        last_idx += 4;
         let mut outputs: Vec<TxOutput> = Vec::with_capacity(output_count as usize);
         for _ in 0..output_count {
             if last_idx + 8 > data.len() {
